@@ -125,11 +125,25 @@ def _unbuilt(name: str):
 
 # Placeholders for the four families of Table 3 (companion paper): wire
 # in the real model builders before use.
+#
+# heu_sphere_nu's source_strength (3.45e14 n/s, not the earlier 1.0e7)
+# is chosen, not arbitrary: at the highest-M k_target (k=0.995, M=200)
+# it gives a per-depletion-step burnup of at most 0.1 MWd/kgHM over a
+# 1-day calendar step -- a standard, conservative depletion step size
+# (cf. Serpent's own documented 0.1-1.0 MWd/kgU early-life step
+# convention) -- with a 200-day total campaign (200 steps). The
+# original 1.0e7 n/s gave a power of only ~26 uW at the same k_target
+# (~1.4e7x below the ~40 kW/kgHM power density used in standard
+# depletion-methodology test cases, e.g. Isotalo, OSTI 1362197), making
+# ANY power-normalized burnup target correspond to an astronomically
+# (and physically meaningless) long calendar duration regardless of
+# what MWd/kg value was chosen. See run_e1_master_table.py /
+# run_e9_fixed_duration.py's submit scripts for the exact derivation.
 for _name, _S0 in [
     ("heu_plate_stack_nu", 1.0e8),
     ("pwr_17x17_nu", 1.0e9),
     ("sfr_metal_fuel_nu", 1.0e9),
-    ("heu_sphere_nu", 1.0e7),
+    ("heu_sphere_nu", 3.45e14),
 ]:
     register_case(BenchmarkCase(
         name=_name,

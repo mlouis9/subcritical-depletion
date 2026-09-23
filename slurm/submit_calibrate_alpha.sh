@@ -7,6 +7,7 @@
 #SBATCH --array=0
 #SBATCH --output=logs/calibrate_%A_%a.out
 #SBATCH --error=logs/calibrate_%A_%a.err
+#SBATCH --wckey=ne_gen
 
 # One-time calibration pass: for the heu_sphere_nu case, bisect for the
 # nu-multiplier alpha achieving every k_target used by E1/E9, and write

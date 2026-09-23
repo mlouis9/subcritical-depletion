@@ -226,8 +226,11 @@ def transport_workdir(cache_root: Path, experiment: str, args, tag: str = "_tran
 
 @contextlib.contextmanager
 def build_operator_and_model(case, args, n_particles, n_generations,
-                              cache_dir: Path, workdir: Path):
-    """Build the SCM model and operator for one replica, as a context
+                              cache_dir: Path, workdir: Path,
+                              run_mode: str = "subcritical multiplication",
+                              operator_cls=None,
+                              calculate_subcritical_k: bool = False):
+    """Build the model and operator for one replica, as a context
     manager: the ``with`` block must contain everything that touches
     this operator, from construction through the integrator's last
     ``operator(vec)`` call, because ``openmc.lib``'s working directory
@@ -254,6 +257,16 @@ def build_operator_and_model(case, args, n_particles, n_generations,
     same across every experiment. The nu-multiplier alpha is resolved via
     :func:`resolve_alpha` (either --alpha directly or a lookup from
     --alpha-lookup-json).
+
+    ``run_mode``/``operator_cls``/``calculate_subcritical_k`` are
+    keyword-only with defaults matching the previous, SCM-only behavior
+    exactly, so E1/E9/calibration needed no changes to keep working. For
+    Method B (E1B/E9B, branching fixed-source), pass
+    ``run_mode="fixed source"``,
+    ``operator_cls=BranchingFixedSourceOperator``, and
+    ``calculate_subcritical_k=True`` -- the last of these is what keeps
+    the k/kq/ks C-API readout valid outside SUBCRITICAL_MULTIPLICATION
+    mode (see ``scm_transport._fetch_k_factors``'s docstring).
 
     ``run_mode`` is set here, not by ``model_builder``, because the same
     model_builder is shared with :func:`~scm_depletion.caseregistry.
@@ -296,10 +309,13 @@ def build_operator_and_model(case, args, n_particles, n_generations,
 
     with isolated_transport_session(workdir):
         model = case.model_builder(resolve_alpha(args))
-        model.settings.run_mode = "subcritical multiplication"
+        model.settings.run_mode = run_mode
+        if calculate_subcritical_k:
+            model.settings.calculate_subcritical_k = True
         model.settings.seed = seed
         model.settings.particles = n_particles
         model.settings.batches = n_generations  # active cycles per depletion step
-        operator = SCMCoupledOperator(model, source_strength=case.source_strength)
+        op_cls = operator_cls or SCMCoupledOperator
+        operator = op_cls(model, source_strength=case.source_strength)
         initial_vec = operator.initial_condition()
         yield model, operator, initial_vec

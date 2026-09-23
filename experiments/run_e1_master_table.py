@@ -76,6 +76,17 @@ def main():
 
         integrator = ExposureIntegrator(
             operator, initial_vec, case.source_strength,
+            # Flat 40 (doubled from the original 20), not a k-dependent
+            # schedule: the theory paper's Sec. 4.3/Appendix C shows
+            # r(Gs) -> c < 1 as k -> 1 for this benchmark family (Remark 2),
+            # so the required inactive-cycle count for a given source bias
+            # is k-independent in the first place -- a flat count was
+            # always the theoretically-motivated choice, not a
+            # simplification pending a schedule. The bump to 40 is purely
+            # to shrink the per-step k_std noise floor identified by
+            # diagnose_R_variance.py, not because 20 was insufficient for
+            # source convergence.
+            n_inactive_schedule=lambda _step: 40,
             diagnostic_fn=lambda res0, res_mid: {"r_fission": _total_fission_rate(res_mid)})
 
         integrator.run(trajectory, dtau_grid, resume=True)

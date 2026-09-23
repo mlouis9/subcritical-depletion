@@ -78,7 +78,15 @@ def main():
             case, args, n_particles, n_generations, cache_dir, workdir) as \
             (model, operator, initial_vec):
 
-        integrator = CalendarIntegrator(operator, initial_vec, case.source_strength)
+        integrator = CalendarIntegrator(operator, initial_vec, case.source_strength,
+                                         # See run_e1_master_table.py's matching
+                                         # comment: doubled from 20, not a
+                                         # k-dependent schedule -- the flat
+                                         # count remains theoretically
+                                         # motivated (Sec. 4.3/Appendix C of
+                                         # the theory paper), this just
+                                         # shrinks the k_std noise floor.
+                                         n_inactive_schedule=lambda _step: 40)
         integrator.run(trajectory, dt_grid, resume=True)
 
     last = trajectory.records[-1]

@@ -26,10 +26,10 @@ import numpy as np
 from openmc.deplete.cram import CRAM16, CRAM48
 
 from .scm_transport import SCMCoupledOperator, SCMOperatorResult, KFactors
-from .matrix_utils import exposure_matrix, calendar_matrix
+from .matrix_utils import exposure_matrix, calendar_matrix, branching_matrix
 from .trajectory import SCMTrajectory, StepRecord
 
-__all__ = ["ExposureIntegrator", "CalendarIntegrator", "StepStats"]
+__all__ = ["ExposureIntegrator", "CalendarIntegrator", "BranchingCalendarIntegrator", "StepStats"]
 
 _CRAM = {16: CRAM16, 48: CRAM48}
 
@@ -244,6 +244,31 @@ class CalendarIntegrator(_CECMBase):
         instability threshold has been crossed.
         """
         return h * k_mid.M * abs(k_prime)
+
+
+class BranchingCalendarIntegrator(CalendarIntegrator):
+    """Method B: branching fixed-source depletion, stepped in calendar
+    time.
+
+    Reuses CalendarIntegrator's stepping and record logic completely
+    unchanged -- including _make_record's dtau = h * S0 * M_mid, which
+    is a SIDE quantity here exactly as it is for Method A: this method's
+    own update needs no k or M at all (see matrix_utils.branching_matrix),
+    but the same calculate_subcritical_k readout still lets this
+    trajectory's accumulated tau be compared against Method A/C at a
+    prescribed exposure, using the identical interpolation machinery
+    (SCMTrajectory.interpolate_at_time / nuclide_at_tau) already used
+    for the matched-burnup rows of the SCM comparison. Only the matrix
+    differs: no S0/M_hat rescaling, since operator must be a
+    BranchingFixedSourceOperator, whose rates are already absolute.
+
+    No n_inactive_schedule is meaningful here (there is no source
+    iteration to warm up) and none should be passed; the base class's
+    _maybe_set_n_inactive is a no-op whenever one isn't supplied.
+    """
+
+    def _build_matrix(self, rates, k_factors, fission_yields):
+        return branching_matrix(self.operator.chain, rates, fission_yields)
 
 
 class RegulatedBeamIntegrator:

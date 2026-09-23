@@ -21,12 +21,13 @@ adapted to the exact C-API of a given SCM-enabled OpenMC build.
 """
 
 from .scm_transport import (
-    SCMOperatorResult, SCMCoupledOperator, KFactors,
+    SCMOperatorResult, SCMCoupledOperator, BranchingFixedSourceOperator, KFactors,
     ForcedKSequence, FrozenComposition, KOverride, CompositionPerturbation,
     VariableParticleCount, isolated_transport_session,
 )
-from .matrix_utils import split_full_matrix, exposure_matrix, calendar_matrix
-from .integrators import ExposureIntegrator, CalendarIntegrator, RegulatedBeamIntegrator, StepStats
+from .matrix_utils import split_full_matrix, exposure_matrix, calendar_matrix, branching_matrix
+from .integrators import (ExposureIntegrator, CalendarIntegrator,
+                           BranchingCalendarIntegrator, RegulatedBeamIntegrator, StepStats)
 from .trajectory import SCMTrajectory
 from . import caseregistry
 from . import bench_models
@@ -34,11 +35,12 @@ from . import common
 from .nu_multiplier import build_nu_scaled_library, scale_nu
 
 __all__ = [
-    "SCMOperatorResult", "SCMCoupledOperator", "KFactors",
+    "SCMOperatorResult", "SCMCoupledOperator", "BranchingFixedSourceOperator", "KFactors",
     "ForcedKSequence", "FrozenComposition", "KOverride", "CompositionPerturbation",
     "VariableParticleCount", "isolated_transport_session",
-    "split_full_matrix", "exposure_matrix", "calendar_matrix",
-    "ExposureIntegrator", "CalendarIntegrator", "RegulatedBeamIntegrator", "StepStats",
+    "split_full_matrix", "exposure_matrix", "calendar_matrix", "branching_matrix",
+    "ExposureIntegrator", "CalendarIntegrator", "BranchingCalendarIntegrator",
+    "RegulatedBeamIntegrator", "StepStats",
     "SCMTrajectory",
     "caseregistry", "bench_models", "common",
     "build_nu_scaled_library", "scale_nu",

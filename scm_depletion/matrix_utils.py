@@ -27,7 +27,7 @@ from typing import List
 
 from .scm_transport import KFactors
 
-__all__ = ["split_full_matrix", "exposure_matrix", "calendar_matrix"]
+__all__ = ["split_full_matrix", "exposure_matrix", "calendar_matrix", "branching_matrix"]
 
 
 def _zero_like(rates, n_mats: int):
@@ -64,6 +64,24 @@ def split_full_matrix(chain, rates, fission_yields: list) -> tuple:
          for i in range(n_mats)]
     A_trans = [full - d for full, d in zip(A_full, D)]
     return A_trans, D
+
+
+def branching_matrix(chain, rates, fission_yields: list) -> List:
+    """Assemble d N / d t = A_t N for Method B (branching fixed-source).
+
+    A_t = A_trans(rates) + D
+
+    Unlike exposure_matrix/calendar_matrix, no S0 or M_hat scaling is
+    applied: ``rates`` here must already be absolute (reactions/second),
+    obtained by calling the reaction-rate extraction with the REAL
+    source_rate=S0 (see BranchingFixedSourceOperator), not the SCM
+    convention of source_rate=1.0 plus a separate S0*M rescale. This is
+    the entire point of Method B in the theory note: it tallies absolute
+    rates directly, with no rescaling step, and hence no rescaling-noise
+    channel at all.
+    """
+    A_trans, D = split_full_matrix(chain, rates, fission_yields)
+    return [At + Dm for At, Dm in zip(A_trans, D)]
 
 
 def exposure_matrix(chain, rates, k_factors: KFactors,

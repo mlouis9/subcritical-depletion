@@ -309,6 +309,75 @@ class SCMCoupledOperator(CoupledOperator):
         return SCMOperatorResult(k_factors, copy.deepcopy(rates), fission_yields)
 
 
+class BranchingFixedSourceOperator(CoupledOperator):
+    """CoupledOperator for Method B: ordinary branching fixed-source
+    Monte Carlo, no population control, no rescaling.
+
+    Structurally the mirror image of SCMCoupledOperator's one
+    deliberate choice: SCMCoupledOperator forces normalization_mode=
+    "source-rate" with source_rate=1.0 so that the SCM-normalized total
+    source (always "1 unit of source, however it's composed") yields
+    the RAW per-particle rate, to be rescaled by S0*M downstream. Here,
+    there is no SCM normalization to undo -- the fission bank grows or
+    shrinks physically with each generation's true production, so
+    passing the REAL source_rate=source_strength (S0) to the same
+    inherited extraction directly yields the ABSOLUTE rate (reactions/
+    second), with no separate rescaling step anywhere downstream (see
+    matrix_utils.branching_matrix).
+
+    model.settings.run_mode must already be RunMode.FIXED_SOURCE (plain
+    branching, not SUBCRITICAL_MULTIPLICATION), with
+    calculate_subcritical_k = True so _fetch_k_factors' C-API call
+    still returns valid k/kq/ks/M for this run's accumulated branching
+    history (see that function's docstring: this is exactly the second
+    of the two supported run-mode/setting combinations). M here is used
+    only as a SIDE quantity for reporting/comparison (accumulating the
+    equivalent exposure this method's own calendar stepping reaches),
+    never to rescale a rate -- Method B needs no rescaling at all.
+
+    There is no analog of SCM's fixed-population source iteration here,
+    and hence no "inactive cycles" concept: model.settings.particles is
+    the number of independent starting histories per batch, and each
+    one is followed through its ENTIRE branching descendant tree within
+    that same batch, not carried forward generation-to-generation the
+    way a source-iteration bank is. This is also why Method B's cost
+    grows with M near criticality (each starting history's own
+    descendant tree grows with M) where SCM's stays fixed -- using the
+    SAME (n_particles, n_generations) as an SCM run is a deliberate,
+    like-for-like choice for the variance comparison, but is NOT a
+    like-for-like COST comparison at that same particle count: expect
+    this to be substantially more expensive than the equivalent SCM run
+    at the same (n_particles, n_generations), and increasingly so
+    approaching k=1. Pilot a single near-critical replica before
+    committing a full array.
+    """
+
+    def __init__(self, model: "openmc.Model", source_strength: float, **kwargs):
+        kwargs["normalization_mode"] = "source-rate"
+        super().__init__(model, **kwargs)
+        if source_strength <= 0:
+            raise ValueError("source_strength (S0) must be positive")
+        self.source_strength = source_strength
+
+    def __call__(self, vec, source_rate=None) -> SCMOperatorResult:
+        openmc.lib.reset()
+        if self._n_calls > 0:
+            openmc.lib.reset_timers()
+
+        self._update_materials_and_nuclides(vec)
+        openmc.lib.run()
+
+        # The REAL S0, not 1.0: this is the one line that differs from
+        # SCMCoupledOperator.__call__, and it's what makes the resulting
+        # rate absolute rather than per-source-particle.
+        rates = self._calculate_reaction_rates(self.source_strength)
+        k_factors = _fetch_k_factors()
+        fission_yields = copy.deepcopy(self.chain.fission_yields)
+
+        self._n_calls += 1
+        return SCMOperatorResult(k_factors, copy.deepcopy(rates), fission_yields)
+
+
 # --------------------------------------------------------------------------
 # Perturbation-hook wrappers (Sections 7.3, 7.6)
 # --------------------------------------------------------------------------
