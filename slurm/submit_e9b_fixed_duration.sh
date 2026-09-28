@@ -4,29 +4,34 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=48:00:00
-#SBATCH --array=0-107%16
+#SBATCH --array=0-167%16
+#SBATCH --wckey=ne_gen
 #SBATCH --output=logs/e9b_%A_%a.out
 #SBATCH --error=logs/e9b_%A_%a.err
-#SBATCH --wckey=ne_gen
 
 # E9B -- Method B (branching fixed-source) analog of E9, for a direct
 # variance-scaling comparison against it. SAME T_MAX as E9 (below,
-# deliberately), same k_target grid, same replica count -- everything
-# structural is identical; only the transport method differs (see
+# deliberately), same k_target grid (now widened, see below), same
+# replica count -- everything structural is identical; only the
+# transport method differs (see
 # experiments/run_e9b_fixed_duration.py's module docstring).
 #
-# --time=48:00:00 (vs E9's 16h) and %16 (vs E9's %64) are STILL STARTING
-# GUESSES, revised upward from the original 24:00:00/%32 now that the
-# full 9-point k_target grid below is meant to actually be submitted
-# (only the cheap, low-M end -- k up to ~0.80 -- has been run and timed
-# here so far): branching fixed-source has no population control, so
-# each of --n-particles starting histories is followed through its
-# ENTIRE descendant tree, which grows with M near criticality -- unlike
-# SCM, whose per-generation cost stays fixed. PILOT ONE near-critical
-# task (edit --array to a single high-k_target index) before submitting
-# the full array, and adjust --time and the %-limit (fewer concurrent
-# tasks if each one is now much more expensive) based on what you
-# actually observe rather than trusting this guess.
+# K_TARGETS widened from 9 to 14 points, matching submit_e1b_master_table.sh,
+# so the fixed-source amplification trend is resolved by more than a
+# handful of points near k=1. N_REPLICAS stays at 12: more k-points was
+# the requested lever here, not more per-point replica statistics (see
+# submit_e1b_master_table.sh's matching comment).
+#
+# --time=48:00:00 (up from 24h, since there are now 14 k_targets instead
+# of 9) and %16 (down from %32) are STILL STARTING GUESSES, not
+# validated: branching fixed-source has no population control, so each
+# of --n-particles starting histories is followed through its ENTIRE
+# descendant tree, which grows with M near criticality -- unlike SCM,
+# whose per-generation cost stays fixed. This array has NOT been run or
+# timed in this environment. PILOT ONE near-critical task (edit --array
+# to a single high-k_target index) before submitting the full array, and
+# adjust --time and the %-limit (fewer concurrent tasks if each one is
+# now much more expensive) based on what you actually observe.
 #
 # Run submit_calibrate_alpha.sh first. `mkdir -p logs cache` from the
 # repository root before your first submission (see common_env.sh).
@@ -34,7 +39,7 @@
 mkdir -p logs
 source "${SLURM_SUBMIT_DIR:?Submit with sbatch from the repository root}/slurm/common_env.sh"
 
-K_TARGETS=(0.50 0.70 0.80 0.90 0.95 0.97 0.98 0.99 0.995)
+K_TARGETS=(0.50 0.60 0.70 0.80 0.85 0.90 0.93 0.95 0.96 0.97 0.98 0.985 0.99 0.995)
 N_REPLICAS=12
 T_MAX=1.728e7
 N_KTARGETS=${#K_TARGETS[@]}

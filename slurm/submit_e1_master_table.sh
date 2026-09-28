@@ -5,29 +5,24 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --time=16:00:00
 #SBATCH --array=0-215%64
+#SBATCH --wckey=ne_gen
 #SBATCH --output=logs/e1_%A_%a.out
 #SBATCH --error=logs/e1_%A_%a.err
-#SBATCH --wckey=ne_gen
 
 # E1 -- exposure-indexed master table (paper Sec. "Variance Scaling
 # Table"): each task runs one replica of one k_target, stepping a FIXED
 # EXPOSURE grid (tau_max held identical across the whole sweep). Array
 # size = N_KTARGETS * N_REPLICAS = 9 * 24 = 216, so --array=0-215 above
-# (replicas doubled from 12 -> 24 to tighten the sqrt(2/(R-1)) relative
-# uncertainty on every variance point; see diagnose_R_variance.py).
+# (replicas doubled from 12 to narrow the replica statistics; particle
+# count and n_inactive also raised -- see N_PARTICLES/N_GENERATIONS below
+# and run_e1_master_table.py's n_inactive_schedule comment -- purely to
+# shrink the per-step k-estimator noise floor identified by
+# diagnose_R_variance.py, not because the original values were wrong).
+# --time bumped to 16h accordingly (was 8h at half the particles/nppg).
 # k_target=0.998 is deliberately excluded: it goes supercritical partway
 # through this exposure window for every replica tried (see the
 # project's own diagnosis of this), which breaks the strictly-increasing
 # clock interpolate_at_time depends on.
-#
-# --n-particles doubled 8000 -> 16000 below: this is the direct lever on
-# the per-step k-estimator noise floor identified by
-# diagnose_R_variance.py as the dominant contribution to the measured
-# R(t*) variance (it should shrink close to linearly in n_particles).
-# --time is roughly doubled from the original 08:00:00 to cover the
-# doubled particle count; re-check against actual observed wall time for
-# your cluster/geometry once the first few tasks land, same as any other
-# capacity planning here.
 #
 # Run submit_calibrate_alpha.sh first. `mkdir -p logs cache` from the
 # repository root before your first submission (see common_env.sh).
@@ -37,9 +32,9 @@ source "${SLURM_SUBMIT_DIR:?Submit with sbatch from the repository root}/slurm/c
 
 K_TARGETS=(0.50 0.70 0.80 0.90 0.95 0.97 0.98 0.99 0.995)
 N_REPLICAS=24
+N_KTARGETS=${#K_TARGETS[@]}
 N_PARTICLES=16000
 N_GENERATIONS=200
-N_KTARGETS=${#K_TARGETS[@]}
 
 task=${SLURM_ARRAY_TASK_ID}
 replica=$(( task % N_REPLICAS )); task=$(( task / N_REPLICAS ))

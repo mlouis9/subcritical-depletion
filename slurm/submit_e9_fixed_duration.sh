@@ -5,9 +5,9 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --time=16:00:00
 #SBATCH --array=0-215%64
+#SBATCH --wckey=ne_gen
 #SBATCH --output=logs/e9_%A_%a.out
 #SBATCH --error=logs/e9_%A_%a.err
-#SBATCH --wckey=ne_gen
 
 # E9 -- calendar-indexed, fixed-calendar-duration sweep (paper Sec.
 # "Variance Scaling Table"): each task runs one replica of one
@@ -37,21 +37,22 @@
 #
 # Run submit_calibrate_alpha.sh first. `mkdir -p logs cache` from the
 # repository root before your first submission (see common_env.sh).
-#
-# Replicas doubled 12 -> 24 and --n-particles doubled 8000 -> 16000
-# below, matching submit_e1_master_table.sh, for the same reasons (the
-# noise-floor decomposition in diagnose_R_variance.py); --time roughly
-# doubled to match. Array size = N_KTARGETS * N_REPLICAS = 9 * 24 = 216.
 
 mkdir -p logs
 source "${SLURM_SUBMIT_DIR:?Submit with sbatch from the repository root}/slurm/common_env.sh"
 
+# Replicas doubled 12 -> 24 and particles/n_inactive raised (see
+# N_PARTICLES/N_GENERATIONS and run_e9_fixed_duration.py's
+# n_inactive_schedule comment) purely to narrow replica statistics and
+# shrink the per-step k-estimator noise floor identified by
+# diagnose_R_variance.py -- --time bumped to 16h and the array widened
+# to 9*24=216 tasks (0-215) accordingly.
 K_TARGETS=(0.50 0.70 0.80 0.90 0.95 0.97 0.98 0.99 0.995)
 N_REPLICAS=24
-N_PARTICLES=16000
-N_GENERATIONS=200
 T_MAX=1.728e7
 N_KTARGETS=${#K_TARGETS[@]}
+N_PARTICLES=16000
+N_GENERATIONS=200
 
 task=${SLURM_ARRAY_TASK_ID}
 replica=$(( task % N_REPLICAS )); task=$(( task / N_REPLICAS ))

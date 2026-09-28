@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Trajectory-band figure (paper Fig. 2 layout), plus a --relative mode
-that plots each replica as its FRACTIONAL deviation from that k_target's
-own ensemble mean, N_i(x)/mean_k(x) - 1, instead of raw N.
+"""Trajectory-band figure (same three-panel layout as
+make_fig_trajectory_bands.py), plus a --relative mode that plots each
+replica as its FRACTIONAL deviation from that k_target's own ensemble
+mean, N_i(x)/mean_k(x) - 1, instead of raw N.
 
 Why this exists: make_fig_trajectory_bands.py plots raw N on a linear
 axis, and for a saturating fission product (Xe-135, I-131) the
@@ -9,22 +10,17 @@ across-k_target range of the MEAN trajectory (set by the physical flux
 level at each k, which varies by 1-2 orders of magnitude over a
 k=0.5->0.995 sweep) dwarfs the within-k_target replica spread on the
 same linear scale. Low-k bands get compressed to a hairline near y=0,
-and any k-dependent widening of the replica spread (the thing the
-M-scaling theory actually predicts) is invisible by construction,
-regardless of whether it is present in the data. This is a plotting
-artifact, not evidence the noise isn't there -- see the companion
-written diagnosis for why U-235 looks "clean" in the original figure:
-its total depletion range across 200 days is only ~2%, so it happens to
-sit in a y-range narrow enough that replica spread stays visible on a
-linear axis without any special handling, not because it is fitting the
-predicted M-scaling from a place of privilege.
+and any k-dependent widening of the replica spread is invisible by
+construction, regardless of whether it is present in the data. This is a
+plotting artifact, not evidence the noise isn't there.
 
 --relative fixes this by removing the across-k mean-level differences
-entirely, leaving only the quantity the theory is actually a statement
-about: how much a replica departs from its own k_target's mean, as a
-fraction. All three panels take the SAME flag.
+entirely, leaving only the quantity of actual interest: how much a
+replica departs from its own k_target's mean, as a fraction. All three
+panels take the SAME flag.
 
-Usage: identical to make_fig_trajectory_bands.py, plus --relative.
+Usage: identical to make_fig_trajectory_bands.py, plus --relative
+(on by default; pass --no-relative for the original raw-N behavior).
 """
 
 from __future__ import annotations
@@ -170,7 +166,8 @@ def main():
     ax_a.set_title(r"(a) against exposure $\tau$ (relative to own-$k$ mean)"
                     if args.relative else r"(a) against exposure $\tau$")
     ax_a.legend(fontsize=7, loc="best")
-    ax_a.axhline(0, color="k", linewidth=0.5, alpha=0.4) if args.relative else None
+    if args.relative:
+        ax_a.axhline(0, color="k", linewidth=0.5, alpha=0.4)
 
     ax_b.set_xlabel(r"$t$"); ax_b.set_ylabel(ylab)
     ax_b.set_title(r"(b) against each trajectory's own $t(\tau)$")
